@@ -9,9 +9,19 @@ class TecnoblogSpider(scrapy.Spider):
 
     def parse(self, response):
         for article in response.css("article"):
-            link    = article.css("div.texts h2 a::attr(href)").extract_first()
-            title   = article.css("div.texts h2 a::text").extract_first()
-            author  = article.css("div.texts div.info a::text").extract_first()
+            link = article.css("div.texts h2 a::attr(href)").extract_first()
+            yield response.follow(link, self.parse_article)
+            
+        next_page = response.css('a#mais::attr(href)').extract_first()
+        
+        if next_page is not None:
+            yield response.follow(next_page, self.parse)
 
-            notice = NoticiasItem(title=title, author=author, link=link)
-            yield notice
+    def parse_article(self, response):
+        link   = response.url
+        title  = response.css("title ::text").extract_first()
+        author = response.css("span.author ::text").extract_first()
+        text   =  "".join(response.css("div.entry ::text").extract())
+
+        notice = NoticiasItem(title=title, author=author, text=text, link=link)
+        yield notice
